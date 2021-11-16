@@ -12,7 +12,7 @@ import {
   Linking,
 } from "react-native";
 
-import NfcManager, { Ndef, NfcTech } from "react-native-nfc-manager";
+import NfcManager, { Ndef, NfcAdapter, nfcManager, NfcTech } from "react-native-nfc-manager";
 // import NfcManager, {Ndef, NfcTech, ByteParser} from 'react-native-nfc-manager'
 
 class App extends Component {
@@ -68,6 +68,21 @@ class App extends Component {
     }
   };
 
+  createArrayBytes = Flag => {
+    let arr = [];
+    let flag = Flag;
+    let inventoryRead = 0xa0;
+    let icMfgCode = 0x04;
+    let afi = 0x00; // optional
+    let maskLength = 0x18; // 24 decimal (3 bytes)
+    let maskValue = arrUID.slice(0, 3); //   0C-4A-DC-A9-50-01-04-E0
+    let firstBlockNumber = 0x00;
+    let numberBlocks = 0x14; //  20 blocks
+    let CRC16 = [0x00, 0x00];
+    arr.push(flag, inventoryRead, icMfgCode, afi, maskLength, maskValue, firstBlockNumber, numberBlocks, CRC16);
+    return arr.flat();
+  };
+
   readData = async () => {
     try {
       let tech = NfcTech.NfcV;
@@ -75,124 +90,36 @@ class App extends Component {
         alertMessage: "Ready for magic",
       });
 
-      NfcManager.isSupported(tech)
-        .then(() => console.log(tech, "is supported"))
-        .catch((err) => console.warn(err));
-
-      var seen = [];
-
-      // JSON.stringify(NfcManager, function (key, val) {
-      //   if (val != null && typeof val == "object") {
-      //     if (seen.indexOf(val) >= 0) {
-      //       return;
-      //     }
-      //     seen.push(val);
-      //   }
-      //   return val;
-      // });
-
-      // console.log('soy seen', seen)
-      console.log("soy nfcManager._ndefHandler ", NfcManager._ndefHandler);
-
-      // NfcManager._ndefHandler
-      //   .getNdefMessage()
-      //   .then( (tagEvent) => console.log('soy tagEvent --> ', tagEvent))
-      //   .catch((err) => console.warn(err));
+      console.log('first resp', resp);
 
       let cmd = NfcManager.transceive;
 
-      const nfcTag = await NfcManager.getTag();
-      console.log("[NFC Read] [INFO] Tag: ", nfcTag);
-
-      const nfcGetLaunchTagEvent = await NfcManager.getLaunchTagEvent();
-      console.log("soy nfcGetLaunchTagEvent", JSON.stringify(nfcGetLaunchTagEvent));
-
-
-      let UID = nfcTag.id;
-      console.log("soy UID --> ", UID);
-
-      var arrUID = [];
-      for (var i = 0; i < UID.length - 1; i++) {
-        arrUID.push(Number('0x' + UID[i] + UID[i + 1]));
-        i++;
-      }
-
-      console.log("soy UID --> ", arrUID.join(' '));
-
-      // var arrUID = [0x0C,0x4A,0xDC,0xA9, 0x50, 0x01, 0x04, 0xE0];
-
-      { 0x02, 0xB2, 0x04} // High data rate
-      { 0x42, 0xB2, 0x04} // High data rate + Option Flag
-
-      const createArrayBytes = (Flag) => {
-        let arr = [];
-        let flag = Flag;
-        let inventoryRead = 0xa0;
-        let icMfgCode = 0x04;
-        let afi = 0x00; // optional
-        let maskLength = 0x18; // 24 decimal (3 bytes)
-        let maskValue = arrUID.slice(0, 3); //   0C-4A-DC-A9-50-01-04-E0
-        let firstBlockNumber = 0x00;
-        let numberBlocks = 0x14; //  20 blocks
-        let CRC16 = [0x00, 0x00];
-        arr.push(flag, inventoryRead, icMfgCode, afi, maskLength, maskValue, firstBlockNumber, numberBlocks, CRC16);
-        return arr.flat();
-      };
+      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
+      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
+      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
+      rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
       
 
-      let rawCommand = new Array(33);
-      // rawCommand.fill([
-      //   0x04, 0xA0, 0x04, 0x18, 0x0C, 0x4A, 0xDC, 0x00, 0x14, 0x01
-      // ])
-
-      rawCommand = [
-        createArrayBytes(0x00),
-        createArrayBytes(0x02),
-        createArrayBytes(0x04),
-        createArrayBytes(0x06),
-        createArrayBytes(0x20),
-        createArrayBytes(0x26),
-        createArrayBytes(0x42),
-        createArrayBytes(0xB2),
-        [0xFF, 0x68, 0x0E, 0x03, 0x10, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x26, 0xa0, 0x04, 0x00, 0x00, 0x00, 0x00],
-        [0xFF, 0x68, 0x0E, 0x03, 0x0c, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x26, 0xa0, 0x04, 0x00, 0x00, 0x00, 0x00]
-      ];
-
-      // console.log('SOY array', rawCommand);
-      let index = 0;
-
-      for (let i = 0; i < rawCommand.length; i++) {
-        // console.log(typeof(rawCommand[i][i]));
-
-        try {
-          let res = await cmd(rawCommand[i])
-          console.log('soy res --> ', res)
-        } catch (err) {
-          console.log(err);
+      console.log('cositas 1');
+        resp = cmd(rawCommand)
+        .then( response => {
+          console.log(response)
+        })
+        .catch( error => {
+          console.log('error cmd', error);
         }
 
-        // cmd(rawCommand[i])
-        //   .then((resp) => {
-        //     console.log("success --> " + resp);
-        //   })
-        //   .catch((err) => {
-        //     console.log("soy error " + i + " " + err);
-        //   });
-          console.log('he ejecutado --> ', JSON.stringify(rawCommand[i]))
-      }
+        )
+      
 
-      console.log("soy index ", index);
+      console.log('soy res --> ', resp)
+      console.log('cositas 2')
+      console.log('he ejecutado --> ', JSON.stringify(rawCommand))
 
-      // try {
-      //   resp = await cmd(rawCommand);
-      // } catch (error) {
-      //   console.log("soy error ", error);
-      // }
-
-      // console.log("soy respuesta ->" + resp);
 
       this._cleanUp();
     } catch (ex) {
+      console.log('error 1 catch', ex)
       this.setState({
         log: ex.toString(),
       });
