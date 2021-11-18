@@ -12,7 +12,13 @@ import {
   Linking,
 } from "react-native";
 
-import NfcManager, { Ndef, NfcAdapter, nfcManager, NfcTech } from "react-native-nfc-manager";
+import NfcManager, {
+  Ndef,
+  NfcAdapter,
+  nfcManager,
+  NfcTech,
+  NfcEvents,
+} from "react-native-nfc-manager";
 // import NfcManager, {Ndef, NfcTech, ByteParser} from 'react-native-nfc-manager'
 
 class App extends Component {
@@ -22,12 +28,29 @@ class App extends Component {
     this.state = {
       log: "",
       text: "",
+      supported: false,
+      enabled: false,
     };
   }
 
   componentDidMount() {
-    NfcManager.start();
+    NfcManager.isSupported(NfcTech.NfcV).then((supported) => {
+      this.setState({ supported });
+      if (supported) {
+        this._startNfc();
+      }
+    });
   }
+
+  _startNfc = () => {
+    NfcManager.start()
+      .then(() => NfcManager.isEnabled())
+      .then((enabled) => this.setState({ enabled }))
+      .catch((err) => {
+        console.warn(err);
+        this.setState({ enabled: false });
+      });
+  };
 
   componentWillUnmount() {
     this._cleanUp();
@@ -68,7 +91,7 @@ class App extends Component {
     }
   };
 
-  createArrayBytes = Flag => {
+  createArrayBytes = (Flag) => {
     let arr = [];
     let flag = Flag;
     let inventoryRead = 0xa0;
@@ -79,7 +102,17 @@ class App extends Component {
     let firstBlockNumber = 0x00;
     let numberBlocks = 0x14; //  20 blocks
     let CRC16 = [0x00, 0x00];
-    arr.push(flag, inventoryRead, icMfgCode, afi, maskLength, maskValue, firstBlockNumber, numberBlocks, CRC16);
+    arr.push(
+      flag,
+      inventoryRead,
+      icMfgCode,
+      afi,
+      maskLength,
+      maskValue,
+      firstBlockNumber,
+      numberBlocks,
+      CRC16
+    );
     return arr.flat();
   };
 
@@ -97,8 +130,10 @@ class App extends Component {
       // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
       // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
       // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
-      rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
-      
+      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
+      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xb2, 0x04]
+      // rawCommand = [0x26, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x1b]
+      rawCommand = [0x26, 0xa1, 0x04, 0x00, 0x03, 0x08];
 
       console.log('cositas 1');
         resp = cmd(rawCommand)
@@ -139,6 +174,13 @@ class App extends Component {
           placeholderTextColor="#888888"
           placeholder="Enter text here"
         />
+        <Text style={styles.text}>
+          {`Is MifareClassic supported ? ${this.state.supported}`}
+        </Text>
+
+        <Text style={styles.text}>
+          {`Is NFC enabled (Android only)? ${this.state.enabled}`}
+        </Text>
 
         <TouchableOpacity onPress={this.writeData} style={styles.buttonWrite}>
           <Text style={styles.buttonText}>Write</Text>
@@ -163,6 +205,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   textInput: {
+    marginLeft: 20,
+    marginRight: 20,
+    height: 50,
+    marginBottom: 10,
+    textAlign: "center",
+    color: "black",
+  },
+  text: {
     marginLeft: 20,
     marginRight: 20,
     height: 50,
