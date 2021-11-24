@@ -116,51 +116,63 @@ class App extends Component {
     return arr.flat();
   };
 
+
+
   readData = async () => {
-    try {
-      let tech = NfcTech.NfcV;
-      let resp = await NfcManager.requestTechnology(tech, {
-        alertMessage: "Ready for magic",
-      });
+    await NfcManager.requestTechnology(NfcTech.NfcV, {
+      alertMessage: "Ready to write some NFC tags!",
+    });
 
-      console.log('first resp', resp);
+    let tag = await NfcManager.getTag();
+    const idBytes = tag.id.split(/(..)/g).filter((s) => s);
+    idBytes.forEach((val, i, a) => (a[i] = parseInt(val, 16)));
 
-      let cmd = NfcManager.transceive;
+    let res = await NfcManager.transceive([32, 32, ...idBytes, 0]); // 32 - read and high speed flags, then follows tag id and last byte is the byte address you want to read
+    console.log("soy --> " + res);
 
-      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
-      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
-      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
-      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
-      // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xb2, 0x04]
-      // rawCommand = [0x26, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x1b]
-      rawCommand = [0x26, 0xa1, 0x04, 0x00, 0x03, 0x08];
+    // try {
+    //   let tech = NfcTech.NfcV;
+    //     let resp = await NfcManager.requestTechnology(tech, {
+    //       alertMessage: "Ready for magic",
+    //     });
 
-      console.log('cositas 1');
-        resp = cmd(rawCommand)
-        .then( response => {
-          console.log(response)
-        })
-        .catch( error => {
-          console.log('error cmd', error);
-        }
+    //   let cmd = NfcManager.transceive;
 
-        )
-      
+    //   // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
+    //   // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
+    //   // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14, 0x00, 0x00];
+    //   // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xa0, 0x04, 0x00, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x14];
+    //   // rawCommand = [NfcAdapter.FLAG_READER_NFC_V, 0xb2, 0x04]
+    //   // rawCommand = [0x26, 0xa0, 0x04, 0x18, 0x0c, 0x4a, 0xdc, 0x00, 0x1b]
+    //   rawCommand = [0xa1, 0x26, 0xa1, 0x04, 0x00, 0x03, 0x08];
 
-      console.log('soy res --> ', resp)
-      console.log('cositas 2')
-      console.log('he ejecutado --> ', JSON.stringify(rawCommand))
+    //   console.log("cositas 1");
+    //     cmd(rawCommand)
+    //       .then((response) => {
+    //         console.log(response);
+    //       })
+    //       .catch((error) => {
+    //         console.log("error cmd", error);
+    //       });
 
+    //   console.log("cositas 2");
+    //   console.log("he ejecutado --> ", JSON.stringify(rawCommand));
 
-      this._cleanUp();
-    } catch (ex) {
-      console.log('error 1 catch', ex)
-      this.setState({
-        log: ex.toString(),
-      });
-      this._cleanUp();
-    }
-  };
+    //   this._cleanUp();
+    // } catch (ex) {
+    //   console.log("error 1 catch", ex);
+    //   this.setState({
+    //     log: ex.toString(),
+    //   });
+    //   this._cleanUp();
+    // }
+  }
+
+  toHexString = byteArray => {
+    return Array.from(byteArray, function (byte) {
+      return ("0" + (byte & 0xff).toString(16)).slice(-2);
+    }).join("");
+  }
 
   render() {
     return (
