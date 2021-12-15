@@ -34,12 +34,7 @@ class App extends Component {
   }
 
   componentDidMount() {
-    NfcManager.isSupported(NfcTech.NfcV).then((supported) => {
-      this.setState({ supported });
-      if (supported) {
-        this._startNfc();
-      }
-    });
+    await NfcManager.start();
   }
 
   _startNfc = () => {
@@ -115,7 +110,6 @@ class App extends Component {
     );
     return arr.flat();
   };
-
 
 
   readData = async () => {
